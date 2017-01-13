@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>画板</title>
+    <script src="js/jquery.js"></script>
+    <script src="js/sharp.js"></script>
+    <style>
+        body,ul,li{
+            margin:0;
+            padding:0;
+            list-style: none;
+        }
+        body{
+            background: url("img/画板.jpg")no-repeat;
+            background-size: cover;
+        }
+        .box{
+            width: 1000px;
+            height: 600px;
+            /*border: 1px solid #666;*/
+            position: fixed;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            margin: auto;
+        }
+        .menu{
+            width:100%;
+            height:10%;
+            /*background: #ccc;*/
+            line-height:50px;
+            position: relative;
+            left: 500px;
+            top: 20px;
+            color: white;
+        }
+        .menu-list{
+            float: left;padding: 0 10px;
+            cursor: pointer;
+            transition: color .5s ease;
+            margin: 11px;
+        }
+        .menu-list:hover{
+            color:red;
+        }
+        .main{
+            width:100%;
+            height:90%;
+        }
+        .main .aside-menu{
+            width:20%;
+            height:100%;
+            overflow: auto;
+            /*border-right: 1px solid #666;*/
+            padding: 20px;
+            box-sizing: border-box;
+            float: right;
+            color: white;
+            position: relative;
+            left: 135px;
+            top: 100px;
+        }
+        .main .aside-menu-list li{
+            margin: 18px;
+        }
+        .main .canvas-box{
+            float: left;
+            width:80%;
+            height:100%;
+            position: relative;
+            box-sizing: border-box;
+        }
+        .main .canvas-box canvas{
+            background: transparent;
+        }
+        .main .canvas-box .copy{
+            position: absolute;
+            left:0;top:0;
+            z-index: 999;
+            width:100%;
+            height:100%;
+        }
+        .aside-menu{
+            text-align: center;
+            line-height:30px;
+            cursor: pointer;
+        }
+        .aside-menu-list:not(:first-child){
+            display: none;
+        }
+        .xpc{
+            width:35px;
+            height:25px;
+            position: absolute;
+            left:0;;
+            top:0;
+            background: #CCCCCC;
+            display: none;
+        }
+    </style>
+    <script>
+        window.onload=function(){
+            var canvasBox=document.querySelector(".canvas-box");
+            var canvasBoxW=canvasBox.offsetWidth;
+            var canvasBoxH=canvasBox.offsetHeight;
+//            var copy=document.querySelector(".copy");
+            var canvas = document.getElementsByTagName("canvas")[0];
+            var copy = document.getElementsByClassName("copy")[0];
+            var cobj = canvas.getContext("2d");
+            canvas.width=canvasBoxW;
+            canvas.height=canvasBoxH;
+            //菜单操作
+            var drawObj = new Shape(canvas,cobj,copy);
+            $(".menu-list").click(function(){
+                var index=$(".menu-list").index(this);
+                $(".aside-menu-list").hide().eq(index).slideToggle(100);
+            });
+            //画图
+            $(".aside-menu-list:eq(1) li").click(function(){
+                var fn=$(this).attr("data-role");
+
+               if (fn!="pen"){
+                   drawObj.type=fn;
+                   drawObj.draw();
+               } else {
+                   drawObj.type=fn;
+                   drawObj.pen();
+               }
+
+            });
+            //画图方式
+            $(".aside-menu-list:eq(2) li").click(function(){
+                var fn=$(this).attr("data-role");
+                drawObj.style=fn;
+                drawObj.draw();
+
+
+
+            });
+            //颜色
+            $(".aside-menu-list:eq(3) input").change(function(){
+                drawObj[$(this).attr("data-role")]=$(this).val();
+                if (drawObj.type!="pen"){
+                    drawObj.draw();
+                }else {
+                    drawObj.pen()
+                }
+
+            });
+            //线的粗细
+            $(".aside-menu-list:eq(4) li").click(function(){
+                var num=$(this).attr("data-role");
+                if(num!="user-defined"){
+                    drawObj.lineWidth=num;
+                    if (drawObj.type!="pen"){
+                        drawObj.draw();
+                    }else {
+                        drawObj.pen()
+                    }
+                }
+
+            });
+            $(".aside-menu-list:eq(4) li input").change(function () {
+
+                var num1=$(this).val();
+                drawObj.lineWidth=num1;
+                if (drawObj.type!="pen"){
+                    drawObj.draw();
+                }else {
+                    drawObj.pen()
+                }
+            });
+
+            /*文件*/
+            //新建
+            $(".aside-menu-list:eq(0) li").click(function(){
+                var index=$(this).index();
+                if (index==0){
+                    if (drawObj.history.length>0){
+                        var sel=confirm("是否保存");
+                    }
+                    if (sel){
+                        var url=canvas.toDataURL();
+                        var newUrl=url.replace("image/png","stream/octet");
+                        location.href=newUrl;
+                    }
+                    cobj.clearRect(0,0,canvas.width,canvas.height);
+                    drawObj.history=[];
+                }else if(index==1){
+                    //返回
+                    if (drawObj.history.length==0){
+                        alert("不能再返回了");
+
+
+                        cobj.clearRect(0,0,canvas.width,canvas.height);
+                    }else {
+                        if (drawObj.isback){
+                            if (drawObj.history.length==1){
+                                drawObj.history.pop();
+                                cobj.clearRect(0,0,canvas.width,canvas.height);
+                            }else{
+                                drawObj.history.pop();
+                                cobj.putImageData(drawObj.history[drawObj.history.length-1],0,0);
+                            }
+                        }else {
+                            cobj.putImageData(drawObj.history.pop(),0,0);
+                        }
+                        drawObj.isback=false;
+                    }
+                }
+                else if(index==2){
+                    var urlData=canvas.toDataURL();
+                    var newUrlData=urlData.replace("image/png","stream/octet");
+                    location.href=newUrlData;
+                }
+            });
+            //橡皮擦
+            $(".menu .menu-list").eq(5).click(function () {
+                var clearObj=$(".xpc");
+                drawObj.clear(clearObj);
+            });
+            $(".aside-menu-list:eq(5) li").click(function(){
+                var num=$(this).attr("data-role");
+                if(num!="user-defined"){
+                    drawObj.clearSize=num;
+                    var clearObj=$(".xpc");
+                    drawObj.clear(clearObj);
+                }
+
+            });
+            $(".aside-menu-list:eq(5) li input").change(function () {
+
+                var num1=$(this).val();
+                drawObj.clearSize=num1;
+                var clearObj=$(".xpc");
+                drawObj.clear(clearObj);
+            });
+
+            $(".aside-menu-list:eq(6) input").change(function(){
+                var fileObj=this.files[0];
+                var reader=new FileReader();
+                reader.readAsDataURL(fileObj);
+                reader.onload=function(e){
+                    img.src= e.target.result;
+                    cobj.drawImage(img,0,0,canvas.width,canvas.height);
+                    dataobj=cobj.getImageData(0,0,canvas.width,canvas.height);
+                }
+            })
+            $(".aside-menu-list:eq(6) li").click(function  () {
+                var attr=this.getAttribute("data-role")
+                if(attr=="gaosimoh"){
+                    drawObj.gaosimoh(dataobj,50,0,0)
+                }else if(attr=="fanxiang"){
+                    drawObj.fanxiang(dataobj,0,0)
+                }else if(attr=="masaike"){
+                    drawObj.masaike(dataobj,50,0,0)
+                }
+            })
+        }
+    </script>
+</head>
+<body>
+<div class="box">
+    <ul class="menu">
+        <li class="menu-list">文件</li>
+        <li class="menu-list">画图</li>
+        <li class="menu-list">画图方式</li>
+        <li class="menu-list">颜色</li>
+        <li class="menu-list">线条宽度</li>
+        <li class="menu-list">擦除</li>
+        <li class="menu-list">图片</li>
+    </ul>
+    <div class="main">
+        <aside class="aside-menu">
+            <ul class="aside-menu-list">
+                <li>新建</li>
+                <li>返回</li>
+                <li>保存</li>
+            </ul>
+            <ul class="aside-menu-list">
+                <li data-role="line">画线</li>
+                <li data-role="rect">矩形</li>
+                <li data-role="circle">圆</li>
+                <li data-role="bian">边</li>
+                <li data-role="jiao">角</li>
+                <li data-role="pen">铅笔工具</li>
+            </ul>
+            <ul class="aside-menu-list">
+                <li data-role="stroke">描边</li>
+                <li data-role="fill">填充</li>
+            </ul>
+            <ul class="aside-menu-list">
+                边框颜色： <input type="color" data-role="strokeStyle">
+                <br/>
+                背景颜色： <input type="color" data-role="fillStyle">
+            </ul>
+            <ul class="aside-menu-list">
+                <li data-role="1">细</li>
+                <li data-role="3">中</li>
+                <li data-role="5">粗</li>
+                <li data-role="user-defined"><input type="number" style="width: 150px;"></li>
+            </ul>
+            <ul class="aside-menu-list">
+                <li data-role="25">小</li>
+                <li data-role="50">中</li>
+                <li data-role="100">大</li>
+                <li data-role="user-defined"><input type="number" style="width: 150px;"></li>
+            </ul>
+            <ul class="aside-menu-list">
+                <li><input type="file"></li>
+                <li data-role="25">反向</li>
+                <li data-role="50">马赛克</li>
+                <li data-role="100">高斯模糊</li>
+            </ul>
+        </aside>
+        <div class="canvas-box">
+            <canvas></canvas>
+            <div class="copy"> </div>
+            <div class="xpc"></div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
